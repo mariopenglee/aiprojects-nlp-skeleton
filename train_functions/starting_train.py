@@ -1,3 +1,4 @@
+from cProfile import label
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,7 +16,7 @@ def starting_train(train_dataset, val_dataset, model, hyperparameters, n_eval):
         hyperparameters: Dictionary containing hyperparameters.
         n_eval:          Interval at which we evaluate our model.
     """
-
+    #model.train()
     # Get keyword arguments
     batch_size, epochs = hyperparameters["batch_size"], hyperparameters["epochs"]
 
@@ -32,24 +33,32 @@ def starting_train(train_dataset, val_dataset, model, hyperparameters, n_eval):
     loss_fn = nn.CrossEntropyLoss()
 
     step = 0
+    losses = []
+    accuracies = []
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1} of {epochs}")
 
         # Loop over each batch in the dataset
         for batch in tqdm(train_loader):
             # TODO: Forward propagate
-
+            output = model.forward(batch[0].type(torch.float))
+            loss = loss_fn(output.squeeze(), batch[1])
             # TODO: Backpropagation and gradient descent
+            loss.backward()
+            optimizer.step()
 
+            losses.append(loss)
+            #accuracies.append(compute_accuracy(output, batch[1]))
             # Periodically evaluate our model + log to Tensorboard
             if step % n_eval == 0:
                 # TODO:
                 # Compute training loss and accuracy.
                 # Log the results to Tensorboard.
 
+
                 # TODO:
                 # Compute validation loss and accuracy.
-                # Log the results to Tensorboard.
+                # Log the results to Tensorboard. 
                 # Don't forget to turn off gradient calculations!
                 evaluate(val_loader, model, loss_fn)
 
@@ -81,4 +90,15 @@ def evaluate(val_loader, model, loss_fn):
 
     TODO!
     """
-    pass
+    model.eval()
+    totalAccuracy = 0
+    counter = 0
+    for batch in tqdm(val_loader):
+        output = model.forward(batch[0].type(torch.float))
+        loss = loss_fn(output.squeeze(), batch[1])
+        prediction = torch.sigmoid(output[0]).item()
+        print(output)
+        print(prediction)
+        totalAccuracy += (compute_accuracy(prediction, batch[1]))
+        counter += 1
+    return (loss, (totalAccuracy/counter))
